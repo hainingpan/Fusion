@@ -2,6 +2,7 @@ from Fusion import *
 import argparse
 from mpi4py.futures import MPIPoolExecutor
 import pickle
+import time
 
 
 def wrapper(inputs):
