@@ -12,6 +12,7 @@ def wrapper(inputs):
     return parity,error
 
 if __name__=='__main__':
+
     parser=argparse.ArgumentParser()
     parser.add_argument('-sigma',type=float,help='sigma for the strength of fluctuation')
     parser.add_argument('-sigma_t',type=float,help='sigma_t for the time correlation')
@@ -22,6 +23,7 @@ if __name__=='__main__':
     parser.add_argument('-ensemble_size',default=2,type=int,help='ensemble size')
 
     args=parser.parse_args()
+    st=time.time()
     
     T_list=np.geomspace(args.Tmin,args.Tmax,args.Tnum)
             
@@ -47,4 +49,6 @@ if __name__=='__main__':
 
     with open(fn,'wb') as f:
         pickle.dump([parity_ensemble,error_ensemble,args],f)
+
+    print(time.time()-st)
 
