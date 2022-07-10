@@ -46,7 +46,7 @@ if __name__=='__main__':
     error_ensemble['B']=error[1]
 
 
-    fn = 'sigma{}_sigma_t{}_{}.pickle'.format(args.sigma,args.sigma_t,args.noise_type)
+    fn = 'sigma{}_sigma_t{}_ensemble{}_{}.pickle'.format(args.sigma,args.sigma_t,args.ensemble,args.noise_type)
 
     with open(fn,'wb') as f:
         pickle.dump([parity_ensemble,error_ensemble,args],f)
