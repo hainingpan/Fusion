@@ -6,9 +6,9 @@ import time
 
 
 def wrapper(inputs):
-    protocol,T,sigma,sigma_t,noise_type=inputs
+    protocol,T,sigma,sigma_t,noise_type,ensemble_index=inputs
     # print(protocol,T)
-    fusion=Fusion(E=np.array([1]*4),t=np.array([1]*3), Delta=np.array([1]*3),T=T,noise_type=noise_type,sigma=sigma,sigma_t=sigma_t)
+    fusion=Fusion(E=np.array([1]*4),t=np.array([1]*3), Delta=np.array([1]*3),T=T,noise_type=noise_type,sigma=sigma,sigma_t=sigma_t,seed=ensemble_index)
     parity,error=fusion.solve(protocol=protocol,method='LSODA',atol=1e-10,rtol=1e-10)
     return parity,error
 
@@ -28,7 +28,7 @@ if __name__=='__main__':
     
     T_list=np.geomspace(args.Tmin,args.Tmax,args.Tnum)
             
-    inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type) for protocol in 'AB' for T in T_list for _  in range(args.ensemble_size)]
+    inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type,ensemble_index) for protocol in 'AB' for T in T_list for ensemble_index  in range(args.ensemble_size)]
 
     with MPIPoolExecutor() as executor:
         rs=list(executor.map(wrapper,inputs))
