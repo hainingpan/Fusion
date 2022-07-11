@@ -6,10 +6,11 @@ from numpy.fft import fft, fftshift, ifft, ifftshift
 from scipy import interpolate
 class Fusion:
     _eps=1e-10
-    def __init__(self,E,t,Delta,T=100,sigma=None,sigma_t=None,noise_type=None,seed=None):
+    def __init__(self,E,t,Delta,T=100,sigma=None,sigma_t=None,noise_type='',seed=None,scaling=2):
         '''
         `sigma` controls the fluctuation of disorder
         `sigma_t` controls the temporal correlation in terms of omega, where the cutoff of the angular frequency  is at 2*pi/sigma_t
+        `noise_type` = E | D (Delta) | t
         '''
         self.E=[E*1.]
         self.t=[t*1.]
@@ -21,10 +22,11 @@ class Fusion:
             self.sigma_t=sigma_t
         self.noise_type=noise_type
         self.seed=seed
+        self.scaling=scaling
         self.N_dot=E.shape[0]
         self.t_list=[0]
         self.prev_dE=0
-        if self.noise_type is not None:
+        if not self.noise_type=='':
             self.get_noise()
         self.M_ee = np.array([
             [0, 0, 0, 0, 0, -1, 0, 0],
@@ -115,7 +117,7 @@ class Fusion:
         assert A.imag.__abs__().max()<self._eps, 'Covariance matrix non real {:e}'.format(A.imag.__abs__().max())
         self.C_m=(A.real-A.T.real)/2 
 
-    def fusion_protocal(self,t,M_vec,protocol):
+    def fusion_protocol(self,t,M_vec,protocol):
         self.t_list.append(t)
         assert protocol in 'AB', 'Unrecognized protocol ({}).'.format(protocol)
         assert t<=2*self.T, 'Invalid query of time ({:.2f}) which is larger than total duration 2T ({:.2f}).'.format(t,2*self.T)
@@ -128,24 +130,43 @@ class Fusion:
         return ((dydt-dydt.T)/2).flatten()
     
     def change_params(self,t,t_E=0,t_Delta=0):
-        '''t_x is the starting time to decrease for `x`, t_x=0, start first, t_x=1, start second'''
+        '''t_x is the onset time of the decline, t_x=0, start first, t_x=1, start second'''
         self.f_list3[1]=self.f(t/self.T-t_Delta)
         self.f_list4[:]=self.f(t/self.T-t_E)
         # dE=np.array([func(t) for func in self.noises_E]).flatten() if self.noise_type=='E' else np.array([0]*self.N_dot)
-        d_E= np.array([np.interp(t,self.ts,noises_E) for noises_E in self.noises_E]) if self.noise_type=='E' else np.array([0]*self.N_dot)
-        d_Delta= np.array([np.interp(t,self.ts,noises_Delta) for noises_Delta in self.noises_Delta]) if self.noise_type=='Delta' else np.array([0]*(self.N_dot-1))
-        d_t= np.array([np.interp(t,self.ts,noises_t) for noises_t in self.noises_t]) if self.noise_type=='t' else np.array([0]*(self.N_dot-1))
+        d_E= np.array([np.interp(t,self.ts,noises_E) for noises_E in self.noises_E]) if 'E' in self.noise_type else np.array([0]*self.N_dot)
+        d_Delta= np.array([np.interp(t,self.ts,noises_Delta) for noises_Delta in self.noises_Delta]) if 'D' in self.noise_type else np.array([0]*(self.N_dot-1))
+        d_t= np.array([np.interp(t,self.ts,noises_t) for noises_t in self.noises_t]) if 't' in self.noise_type else np.array([0]*(self.N_dot-1))
         self.Delta.append(self.Delta[0]*self.f_list3+d_Delta)
         self.t.append(self.t[0]*self.f_list3+d_t)
         self.E.append(self.E[0]*self.f_list4+d_E)
 
     def f(self,x):
-        if x<0:
-            return 1
-        elif x<1:
-            return 1-np.sin(.5*np.pi*x)**2 
-        else:
-            return 0
+        # the finite derivative since order of scaling
+        if self.scaling==1:
+            if x<0:
+                return 1
+            elif x<1:
+                return 1-x
+            else:
+                return 0
+        if self.scaling==2:
+            if x<0:
+                return 1
+            elif x<1:
+                return 1-np.sin(.5*np.pi*x)**2 
+            else:
+                return 0
+
+        if self.scaling==3:
+            if x<0:
+                return 1
+            elif x<1:
+                return 1-10*x**3+15*x**4-6*x**5
+            else:
+                return 0
+            
+        
 
     def get_error(self,A,B):
         return 1-np.abs(pf.pfaffian(A+B))/2**4
@@ -154,29 +175,30 @@ class Fusion:
         return A[5,0].real
 
     def get_noise(self):
-        if self.noise_type == 'E':
-            self.ts,self.noises_E=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot,seed=self.seed)
-        if self.noise_type == 'Delta':
-            self.ts,self.noises_Delta=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed)
-        if self.noise_type == 't':
-            self.ts,self.noises_t=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed)
+        self.ts,_=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=1,seed=self.seed)
+        _,self.noises_E=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot,seed=self.seed) if 'E' in self.noise_type else (None,None)
+        
+        _,self.noises_Delta=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed) if 'D' in self.noise_type else (None,None)
+        
+        _,self.noises_t=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed) if 't' in self.noise_type else (None,None)
 
     def solve(self,protocol,**kwargs):
         if not hasattr(self, 'C_m'):
             self.covariance_matrix()
         
         # max_step= 0.5*self.sigma_t if self.noise_type is not None else np.inf
-        sol=solve_ivp(self.fusion_protocal,(0,self.T*2),self.C_m.flatten(),args=(protocol,), **kwargs)
+        sol=solve_ivp(self.fusion_protocol,(0,self.T*2),self.C_m.flatten(),args=(protocol,), **kwargs)
         M_final=sol.y[:,-1].reshape((8,8))
         error=self.get_error(M_final,self.M_ee if protocol=='A' else self.M_eo)
         parity=self.get_parity(M_final)
         return parity,error
+    
 
 def autocorrelated_noise(T,sigma,sigma_t,N=None,seed=None,k=1):
     if N is None:
         N=2*int(2*T/sigma_t)
     assert N%2==0, 'N should be even number to ensure a real time series.'
-    dt=T/N
+    dt=2*T/N
     if seed is not None:
         rng = np.random.default_rng(seed)
     else:
