@@ -35,11 +35,15 @@ if __name__=='__main__':
     parser.add_argument('-scaling',default=2,type=int,help='scaling')
     parser.add_argument('-atol',default=1e-5,type=float,help='atol, use 1e-5 for disorder/ 1e-10 for no disorder scaling')
     parser.add_argument('-rtol',default=1e-5,type=float,help='rtol, use 1e-5 for disorder/ 1e-10 for no disorder scaling')
+    parser.add_argument('-geom',action=store_true,help='use geomspace in T list')
 
     args=parser.parse_args()
     st=time.time()
-    
-    T_list=np.geomspace(args.Tmin,args.Tmax,args.Tnum)
+
+    if args.geom:
+        T_list=np.geomspace(args.Tmin,args.Tmax,args.Tnum)
+    else:
+        T_list=np.linspace(args.Tmin,args.Tmax,args.Tnum)
             
     inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type,args.scaling,args.atol,args.rtol,ensemble_index) for protocol in args.protocol for T in T_list for ensemble_index in range(args.ensemble_size)]
 
