@@ -66,7 +66,7 @@ if __name__=='__main__':
     fn = 'sigma{}_sigma_t{}_ensemble{}_scaling{}_{}_{}.pickle'.format(args.sigma,args.sigma_t,args.ensemble_size,args.scaling,args.protocol,args.noise_type)
 
     with open(fn,'wb') as f:
-        pickle.dump([parity_ensemble,error_ensemble,args,disorder],f)
+        pickle.dump([parity_ensemble,error_ensemble,args,disorder_ensemble],f)
 
     print(time.time()-st)
 
