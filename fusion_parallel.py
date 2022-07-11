@@ -43,9 +43,9 @@ if __name__=='__main__':
             
     inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type,args.scaling,args.atol,args.rtol,ensemble_index) for protocol in args.protocol for T in T_list for ensemble_index in range(args.ensemble_size)]
 
-    # with MPIPoolExecutor() as executor:
-    #     rs=list(executor.map(wrapper,inputs))
-    rs=list(map(wrapper,inputs))
+    with MPIPoolExecutor() as executor:
+        rs=list(executor.map(wrapper,inputs))
+    # rs=list(map(wrapper,inputs))
     
     parity,error,disorder=zip(*rs)
     parity=np.array(parity).reshape((len(args.protocol),T_list.shape[0],args.ensemble_size))
