@@ -63,11 +63,7 @@ if __name__=='__main__':
         error_ensemble[protocol]=error_0
         disorder_ensemble[protocol]=disorder_0
 
-                
-
-
-
-    fn = 'sigma{}_sigma_t{}_ensemble{}_{}_{}.pickle'.format(args.sigma,args.sigma_t,args.ensemble_size,args.protocol,args.noise_type)
+    fn = 'sigma{}_sigma_t{}_ensemble{}_scaling{}_{}_{}.pickle'.format(args.sigma,args.sigma_t,args.ensemble_size,args.scaling,args.protocol,args.noise_type)
 
     with open(fn,'wb') as f:
         pickle.dump([parity_ensemble,error_ensemble,args,disorder],f)
