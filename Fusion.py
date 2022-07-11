@@ -120,7 +120,7 @@ class Fusion:
     def fusion_protocol(self,t,M_vec,protocol):
         self.t_list.append(t)
         assert protocol in 'AB', 'Unrecognized protocol ({}).'.format(protocol)
-        assert t<=2*self.T, 'Invalid query of time ({:.2f}) which is larger than total duration 2T ({:.2f}).'.format(t,2*self.T)
+        # assert t<=2*self.T, 'Invalid query of time ({:.2f}) which is larger than total duration 2T ({:.2f}).'.format(t,2*self.T)
         scheme={'A':lambda x: self.change_params(x,t_Delta=0,t_E=1),'B':lambda x: self.change_params(x,t_Delta=1,t_E=0)}
         
         M_mat=M_vec.reshape((2*self.N_dot,2*self.N_dot))
