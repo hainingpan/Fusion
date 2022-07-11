@@ -6,19 +6,20 @@ import time
 
 
 def wrapper(inputs):
-    protocol,T,sigma,sigma_t,noise_type,scaling,atol,rtol,ensemble_index=inputs
+    protocol,T,sigma,sigma_t,noise_type,scaling,atol,rtol,savedisorder,ensemble_index=inputs
     # print(protocol,T)
     fusion=Fusion(E=np.array([1]*4),t=np.array([1]*3), Delta=np.array([1]*3),T=T,noise_type=noise_type,sigma=sigma,sigma_t=sigma_t,seed=ensemble_index,scaling=scaling)
     parity,error=fusion.solve(protocol=protocol,method='LSODA',atol=atol,rtol=rtol)
     disorder={}
-    if hasattr(fusion, 'ts'):
-        disorder['ts']=fusion.ts
-    if hasattr(fusion, 'noises_E'):
-        disorder['noises_E']=fusion.noises_E
-    if hasattr(fusion, 'noises_Delta'):
-        disorder['noises_Delta']=fusion.noises_Delta
-    if hasattr(fusion, 'noises_t'):
-        disorder['noises_t']=fusion.noises_t
+    if savedisorder:
+        if hasattr(fusion, 'ts'):
+            disorder['ts']=fusion.ts
+        if hasattr(fusion, 'noises_E'):
+            disorder['noises_E']=fusion.noises_E
+        if hasattr(fusion, 'noises_Delta'):
+            disorder['noises_Delta']=fusion.noises_Delta
+        if hasattr(fusion, 'noises_t'):
+            disorder['noises_t']=fusion.noises_t
     return parity,error,disorder
 
 if __name__=='__main__':
@@ -35,7 +36,8 @@ if __name__=='__main__':
     parser.add_argument('-scaling',default=2,type=int,help='scaling')
     parser.add_argument('-atol',default=1e-5,type=float,help='atol, use 1e-5 for disorder/ 1e-10 for no disorder scaling')
     parser.add_argument('-rtol',default=1e-5,type=float,help='rtol, use 1e-5 for disorder/ 1e-10 for no disorder scaling')
-    parser.add_argument('-geom',action=store_true,help='use geomspace in T list')
+    parser.add_argument('-geom',action='store_true',help='use geomspace in T list')
+    parser.add_argument('-savedisorder',action='store_true',help='save disorder profile if turned on')
 
     args=parser.parse_args()
     st=time.time()
@@ -45,7 +47,7 @@ if __name__=='__main__':
     else:
         T_list=np.linspace(args.Tmin,args.Tmax,args.Tnum)
             
-    inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type,args.scaling,args.atol,args.rtol,ensemble_index) for protocol in args.protocol for T in T_list for ensemble_index in range(args.ensemble_size)]
+    inputs=[(protocol,T,args.sigma,args.sigma_t,args.noise_type,args.scaling,args.atol,args.rtol,args.savedisorder,ensemble_index) for protocol in args.protocol for T in T_list for ensemble_index in range(args.ensemble_size)]
 
     with MPIPoolExecutor() as executor:
         rs=list(executor.map(wrapper,inputs))
@@ -58,9 +60,6 @@ if __name__=='__main__':
     parity_ensemble={}
     error_ensemble={}
     disorder_ensemble={}
-    # noise_E_ensemble={}
-    # noise_Delta_ensemble={}
-    # noise_t_ensemble={}
 
     for protocol, parity_0, error_0, disorder_0 in zip(args.protocol,parity,error,disorder):
         parity_ensemble[protocol]=parity_0
