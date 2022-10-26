@@ -6,7 +6,7 @@ from numpy.fft import fft, fftshift, ifft, ifftshift
 from scipy import interpolate
 class Fusion:
     _eps=1e-10
-    def __init__(self,E,t,Delta,T=100,sigma=None,sigma_t=None,noise_type='',seed=None,scaling=2):
+    def __init__(self,E,t,Delta,T=100,sigma=None,sigma_t=None,noise_type='',seed=None,scaling=2,t_f=[0]*3,Delta_f=[0]*3,E_f=[0]*4):
         '''
         `sigma` controls the fluctuation of disorder
         `sigma_t` controls the temporal correlation in terms of omega, where the cutoff of the angular frequency  is at 2*pi/sigma_t
@@ -15,6 +15,9 @@ class Fusion:
         self.E=[E*1.]
         self.t=[t*1.]
         self.Delta=[Delta*1.]
+        self.t_f=np.array(t_f)
+        self.Delta_f=np.array(Delta_f)
+        self.E_f=np.array(E_f)
         self.T=T
         if sigma is not None:
             self.sigma=sigma
@@ -137,9 +140,9 @@ class Fusion:
         d_E= np.array([np.interp(t,self.ts,noises_E) for noises_E in self.noises_E]) if 'E' in self.noise_type else np.array([0]*self.N_dot)
         d_Delta= np.array([np.interp(t,self.ts,noises_Delta) for noises_Delta in self.noises_Delta]) if 'D' in self.noise_type else np.array([0]*(self.N_dot-1))
         d_t= np.array([np.interp(t,self.ts,noises_t) for noises_t in self.noises_t]) if 't' in self.noise_type else np.array([0]*(self.N_dot-1))
-        self.Delta.append(self.Delta[0]*self.f_list3+d_Delta)
-        self.t.append(self.t[0]*self.f_list3+d_t)
-        self.E.append(self.E[0]*self.f_list4+d_E)
+        self.Delta.append((self.Delta[0]-self.Delta_f)*self.f_list3+self.Delta_f+d_Delta)
+        self.t.append((self.t[0]-self.t_f)*self.f_list3+self.t_f+d_t)
+        self.E.append((self.E[0]-self.E_f)*self.f_list4+self.E_f+d_E)
 
     def f(self,x):
         # the finite derivative since order of scaling
@@ -177,10 +180,19 @@ class Fusion:
     def get_noise(self):
         self.ts,_=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=1,seed=self.seed)
         _,self.noises_E=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot,seed=self.seed) if 'E' in self.noise_type else (None,None)
-        
+
+        # tmp=self.noises_E[0]
+        # self.noises_E=self.noises_E*0
+        # self.noises_E[2]=tmp
+
         _,self.noises_Delta=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed) if 'D' in self.noise_type else (None,None)
         
         _,self.noises_t=autocorrelated_noise(T=2*self.T,sigma=self.sigma,sigma_t=self.sigma_t,k=self.N_dot-1,seed=self.seed) if 't' in self.noise_type else (None,None)
+
+        
+        # tmp=self.noises_Delta[0]
+        # self.noises_Delta=self.noises_Delta*0
+        # self.noises_Delta[0]=tmp
 
     def solve(self,protocol,**kwargs):
         if not hasattr(self, 'C_m'):
